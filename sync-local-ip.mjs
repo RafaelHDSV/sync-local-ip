@@ -367,11 +367,13 @@ function discoverTargetFilesInRoot(reposRoot) {
         continue
       }
       if (!entry.isFile()) continue
-      if (ENV_FILE_NAMES.has(entry.name)) {
+      // Windows nao diferencia caixa: _localvars.ts e carregado por require('./_localVars').
+      const name = entry.name.toLowerCase()
+      if (ENV_FILE_NAMES.has(name)) {
         envFiles.push(fullPath)
         continue
       }
-      if (entry.name === LOCAL_VARS_FILE) {
+      if (name === LOCAL_VARS_FILE.toLowerCase()) {
         localVarsFiles.push(fullPath)
       }
     }
@@ -382,17 +384,23 @@ function discoverTargetFilesInRoot(reposRoot) {
 }
 
 function discoverTargetFiles(scanRoots, verbose) {
-  const envSet = new Set()
-  const localVarsSet = new Set()
+  // Chave em minusculas: "C:\AGX" e "C:\AGX\main workspace" chegam ao mesmo arquivo com caixas
+  // diferentes ("Main workspace" vs "main workspace"). Fica o primeiro caminho visto.
+  const envMap = new Map()
+  const localVarsMap = new Map()
+  const addOnce = (map, filePath) => {
+    const key = filePath.toLowerCase()
+    if (!map.has(key)) map.set(key, filePath)
+  }
 
   for (const root of scanRoots) {
     const { envFiles, localVarsFiles } = discoverTargetFilesInRoot(root)
-    for (const filePath of envFiles) envSet.add(filePath)
-    for (const filePath of localVarsFiles) localVarsSet.add(filePath)
+    for (const filePath of envFiles) addOnce(envMap, filePath)
+    for (const filePath of localVarsFiles) addOnce(localVarsMap, filePath)
   }
 
-  const envFiles = [...envSet]
-  const localVarsFiles = [...localVarsSet]
+  const envFiles = [...envMap.values()]
+  const localVarsFiles = [...localVarsMap.values()]
 
   if (verbose) {
     console.log(

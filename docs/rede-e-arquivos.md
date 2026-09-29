@@ -56,6 +56,8 @@ Busca recursiva. Ignora `node_modules`, `.git`, `dist`, `build`, `.next`, `cover
 | `.env` e `.env.local` | Substitui pelo detectado os IPs antigos desta máquina (histórico de qualquer perfil), os do prefixo do perfil atual e o IP da outra rede da tabela, se houver |
 | `_localVars.ts` | Idem |
 
+O nome é comparado sem diferenciar maiúsculas, como o próprio Windows faz: `_localvars.ts` e `.ENV` entram. O `_localVars.ts` costuma estar no `.gitignore` e ser criado à mão, e o `require('./_localVars')` o encontra com qualquer caixa. Um arquivo alcançado por duas raízes de `scanRoots` com caixas diferentes (`Main workspace` / `main workspace`) é processado uma vez só.
+
 Não entram: `.env.development`, `.env.production`, `.env.test` e qualquer outro nome. Se o IP do app estiver só nesses, a tag pode ficar verde e o app continuar no IP velho.
 
 ### Só em `reposRoot` (pulados se ausentes)

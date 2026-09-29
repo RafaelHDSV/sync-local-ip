@@ -31,10 +31,12 @@ function setupSandbox({ state, table }) {
   return { root, tool, repos, envPath: join(repos, 'app', '.env') }
 }
 
-function runSync(sandbox, ip) {
-  return execFileSync(process.execPath, [join(sandbox.tool, 'sync-local-ip.mjs'), '--ip', ip], {
-    encoding: 'utf8',
-  })
+function runSync(sandbox, ip, extraArgs = []) {
+  return execFileSync(
+    process.execPath,
+    [join(sandbox.tool, 'sync-local-ip.mjs'), '--ip', ip, ...extraArgs],
+    { encoding: 'utf8' }
+  )
 }
 
 describe('sync dos .env ao trocar de rede', () => {
@@ -93,6 +95,41 @@ describe('sync dos .env ao trocar de rede', () => {
       writeFileSync(sandbox.envPath, 'API_URL=http://172.24.0.50:3693\n')
       runSync(sandbox, '10.10.0.70')
       assert.match(readFileSync(sandbox.envPath, 'utf8'), /API_URL=http:\/\/10\.10\.0\.70:3693/)
+    })
+  })
+
+  describe('nomes com outra caixa (Windows nao diferencia)', () => {
+    beforeEach(() => {
+      sandbox = setupSandbox({
+        state: { ip: '192.168.0.31', profile: 'home', previousIps: ['172.28.80.1'], adapter: 'Ethernet' },
+        table: null,
+      })
+    })
+
+    it('atualiza _localvars.ts (v minusculo)', () => {
+      const dir = join(sandbox.repos, 'shorten', 'source', 'config')
+      mkdirSync(dir, { recursive: true })
+      const file = join(dir, '_localvars.ts')
+      writeFileSync(file, "const IP = '172.28.80.1'\n")
+      runSync(sandbox, '192.168.0.31')
+      assert.match(readFileSync(file, 'utf8'), /const IP = '192\.168\.0\.31'/)
+    })
+
+    it('atualiza .ENV (maiusculo)', () => {
+      const file = join(sandbox.repos, 'app', '.ENV')
+      writeFileSync(file, 'API_URL=http://172.28.80.1:3693\n')
+      runSync(sandbox, '192.168.0.31')
+      assert.match(readFileSync(file, 'utf8'), /192\.168\.0\.31/)
+    })
+
+    it('nao processa duas vezes a mesma pasta escrita com outra caixa', () => {
+      const cfgPath = join(sandbox.tool, 'config.json')
+      const cfg = JSON.parse(readFileSync(cfgPath, 'utf8'))
+      cfg.scanRoots = [sandbox.repos, join(sandbox.repos, 'APP')]
+      writeFileSync(cfgPath, JSON.stringify(cfg))
+      writeFileSync(sandbox.envPath, 'API_URL=http://172.28.80.1:3693\n')
+      const out = runSync(sandbox, '192.168.0.31', ['--verbose'])
+      assert.match(out, /: 1 env, 0 _localVars\.ts/)
     })
   })
 
