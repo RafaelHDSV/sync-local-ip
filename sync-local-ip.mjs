@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pickPrimaryIpv4 } from './lib/detect-ip.mjs'
-import { profileForIp, ipMatchesProfile } from './lib/network-profile.mjs'
+import { profileForIp, ipMatchesProfile, ENV_SCAN_PATTERNS } from './lib/network-profile.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const STATE_FILE = join(__dirname, '.last-ip.json')
@@ -259,9 +259,13 @@ function findStaleIpsInWorkspace(scanRoots, detected, profile) {
     } catch {
       continue
     }
-    for (const match of text.matchAll(profile.staleIpPattern)) {
-      const ip = match[1]
-      if (ip !== detected) found.add(ip)
+    // Prefixos de todos os perfis: ao trocar de rede, o IP velho nos .env e o da outra rede,
+    // e sem historico nem linha na tabela so a varredura o encontra. 192.168 fica fora (ver lib).
+    for (const pattern of ENV_SCAN_PATTERNS) {
+      for (const match of text.matchAll(pattern)) {
+        const ip = match[1]
+        if (ip !== detected) found.add(ip)
+      }
     }
   }
   return [...found]

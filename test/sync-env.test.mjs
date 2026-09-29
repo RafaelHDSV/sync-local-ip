@@ -22,10 +22,11 @@ function setupSandbox({ state, table }) {
   writeFileSync(join(tool, 'config.json'), JSON.stringify({ userKey: 'dev', reposRoot: repos }))
   writeFileSync(join(tool, '.last-ip.json'), JSON.stringify(state))
   mkdirSync(join(repos, 'ips'), { recursive: true })
-  writeFileSync(
-    join(repos, 'ips', 'table.ts'),
-    `export const table = {\n  dev: {\n    empresa: "${table.empresa}",\n    casa: "${table.casa}",\n  },\n}\n`
-  )
+  // table null = userKey ausente da tabela (dev ainda nao cadastrado)
+  const row = table
+    ? `  dev: {\n    empresa: "${table.empresa}",\n    casa: "${table.casa}",\n  },\n`
+    : `  outro: {\n    empresa: "10.10.0.200",\n    casa: "172.24.0.200",\n  },\n`
+  writeFileSync(join(repos, 'ips', 'table.ts'), `export const table = {\n${row}}\n`)
   mkdirSync(join(repos, 'app'))
   return { root, tool, repos, envPath: join(repos, 'app', '.env') }
 }
@@ -68,6 +69,30 @@ describe('sync dos .env ao trocar de rede', () => {
       writeFileSync(sandbox.envPath, 'API_URL=http://10.10.0.66:3693\n')
       runSync(sandbox, '192.168.0.31')
       assert.match(readFileSync(sandbox.envPath, 'utf8'), /192\.168\.0\.31/)
+    })
+  })
+
+  describe('sem historico e sem linha na tabela', () => {
+    it('em casa (LAN), troca o 10.10.0.x que ficou nos .env', () => {
+      sandbox = setupSandbox({
+        state: { ip: '192.168.0.31', profile: 'home', previousIps: [], adapter: 'Ethernet' },
+        table: null,
+      })
+      writeFileSync(sandbox.envPath, 'API_URL=http://10.10.0.66:3693\nHYPERV=192.168.96.1\n')
+      runSync(sandbox, '192.168.0.31')
+      const env = readFileSync(sandbox.envPath, 'utf8')
+      assert.match(env, /API_URL=http:\/\/192\.168\.0\.31:3693/)
+      assert.match(env, /HYPERV=192\.168\.96\.1/)
+    })
+
+    it('na empresa, troca o 172.24.x que ficou nos .env', () => {
+      sandbox = setupSandbox({
+        state: { ip: '10.10.0.70', profile: 'company', previousIps: [], adapter: 'Ethernet' },
+        table: null,
+      })
+      writeFileSync(sandbox.envPath, 'API_URL=http://172.24.0.50:3693\n')
+      runSync(sandbox, '10.10.0.70')
+      assert.match(readFileSync(sandbox.envPath, 'utf8'), /API_URL=http:\/\/10\.10\.0\.70:3693/)
     })
   })
 

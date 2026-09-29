@@ -69,6 +69,7 @@ Sem `yarn` / `npm install` / build. Quick start no [README](../README.md). Detal
 | 8 | `reposRoot` | Exige um marcador de pasta hoje; envs extras vão em `scanRoots` |
 | 9 | Prefixo `192.168` | Tratado como casa (LAN doméstica). Fica fora da varredura por prefixo dos `.env`; só um `192.168` já gravado pela ferramenta é trocado |
 | 10 | Histórico em `.last-ip.json` | Vale entre perfis: o IP gravado na outra rede é trocado ao mudar de rede |
+| 11 | Varredura dos `.env` | Procura os prefixos AGX de todos os perfis (`10.10.0`, `172.24`, `10.20`) em qualquer rede, para a troca não depender da tabela nem do histórico |
 
 ---
 

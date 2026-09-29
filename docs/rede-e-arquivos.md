@@ -38,12 +38,12 @@ Em qualquer perfil, primeiro os IPs que a ferramenta **já gravou nesta máquina
 
 Somam-se a eles:
 
-- Na rede empresa: qualquer `10.10.0.x` diferente do detectado, e também o IP de `casa` cadastrado na sua linha da tabela (se houver tabela).
-- Na rede casa: qualquer `172.24.x` / `10.20.x` diferente do detectado, e também o IP de `empresa` da tabela.
+- Qualquer `10.10.0.x`, `172.24.x` ou `10.20.x` diferente do detectado, **em qualquer rede**. A varredura procura os prefixos AGX de todos os perfis, porque ao trocar de rede o IP velho nos `.env` é o da outra rede. Sem essa varredura, um dev sem linha na tabela e sem histórico nunca teria os `.env` trocados.
+- O IP de `empresa` e o de `casa` cadastrados na sua linha da tabela (se houver tabela).
 
 Um `192.168.x` que a ferramenta não conhece não é mexido. A varredura por prefixo não inclui `192.168`, porque trocaria o `vEthernet` do Hyper-V, IPs de Docker e aparelhos da LAN.
 
-A troca é do **texto do número**, em qualquer lugar do arquivo. Não há lista de nomes de variável. Se um `.env` dentro de `scanRoots` tiver o `10.10.0.x` de outra pessoa, esse número vira o seu na rede empresa. Não aponte `scanRoots` para pastas de exemplo ou de outro login se esses arquivos não devem seguir o seu IP.
+A troca é do **texto do número**, em qualquer lugar do arquivo. Não há lista de nomes de variável. Se um `.env` dentro de `scanRoots` tiver o `10.10.0.x` ou o `172.24.x` de outra pessoa, esse número vira o seu, em qualquer rede. Não aponte `scanRoots` para pastas de exemplo ou de outro login se esses arquivos não devem seguir o seu IP.
 
 ## Arquivos atualizados
 
