@@ -4,7 +4,7 @@ Seu IP local muda. Seus `.env` não acompanham — até agora.
 
 **sync-local-ip** descobre o IPv4 útil desta máquina no Windows e grava esse endereço nos arquivos locais dos seus clones. Sem abrir terminal. Sem editar dezenas de arquivos à mão.
 
-Nasceu no fluxo de desenvolvimento da AGX (rede empresa / rede casa, `ips/table.ts`, Serveruler). Não é exclusivo dela: qualquer pasta em `scanRoots` pode receber o IP novo em `.env`, `.env.local` e `_localVars.ts`. Arquivos AGX só são atualizados se existirem.
+Qualquer pasta em `scanRoots` recebe o IP novo em `.env`, `.env.local` e `_localVars.ts`. Se existirem `ips/table.ts`, `data.json` ou o redirect do Serveruler, esses arquivos também são atualizados.
 
 ## O que ele faz
 
@@ -46,7 +46,7 @@ Edite o `config.json`:
 }
 ```
 
-- `userKey` — identificador seu (na AGX, a chave em `ips/table.ts`).
+- `userKey` — identificador seu (a mesma chave em `ips/table.ts`, se você usar essa tabela).
 - `reposRoot` — pasta âncora dos clones (detalhes em [configuração](docs/configuracao.md)).
 - `scanRoots` — onde varrer `.env` e `_localVars.ts`. Pode listar **qualquer** repositório.
 
