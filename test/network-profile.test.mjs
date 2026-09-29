@@ -15,8 +15,21 @@ describe('profileForIp', () => {
     assert.equal(profileForIp('10.20.0.244')?.id, 'home')
   })
 
+  it('classifica casa 192.168.x (LAN domestica)', () => {
+    assert.equal(profileForIp('192.168.0.31')?.id, 'home')
+  })
+
   it('rejeita IP fora dos perfis AGX', () => {
-    assert.equal(profileForIp('192.168.1.10'), null)
+    assert.equal(profileForIp('26.246.161.213'), null)
+    assert.equal(profileForIp('8.8.8.8'), null)
+  })
+})
+
+describe('staleIpPattern', () => {
+  it('casa nao varre 192.168.x nos .env (Hyper-V, Docker, LAN)', () => {
+    const text = 'A=192.168.96.1 B=192.168.0.10 C=172.24.0.5'
+    const found = [...text.matchAll(PROFILES.home.staleIpPattern)].map((m) => m[1])
+    assert.deepEqual(found, ['172.24.0.5'])
   })
 })
 

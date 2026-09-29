@@ -46,6 +46,37 @@ Adaptador de LAN sem fio Wi-Fi:
    Gateway Padrão. . . . . . . . . . . . . . . . . : 10.10.0.1
 `
 
+// Casa, PT-BR: Radmin VPN aparece como "Ethernet 3" (sem "Radmin" no nome) e antes da LAN.
+const SAMPLE_PT_HOME = `
+Configuração de IP do Windows
+
+Adaptador Ethernet vEthernet (Default Switch):
+
+   Endereço IPv4. . . . . . . .  . . . . . . . : 192.168.96.1
+   Máscara de Sub-rede . . . . . . . . . . . . : 255.255.240.0
+   Gateway Padrão. . . . . . . . . . . . . . . :
+
+Adaptador Ethernet Ethernet 3:
+
+   Endereço IPv4. . . . . . . .  . . . . . . . : 26.246.161.213
+   Máscara de Sub-rede . . . . . . . . . . . . : 255.0.0.0
+   Gateway Padrão. . . . . . . . . . . . . . . : 26.0.0.1
+
+Adaptador Ethernet Ethernet:
+
+   Sufixo DNS específico de conexão. . . . . . : home
+   Endereço IPv6 . . . . . . . . . . : 2804:14d:c091:90f2::1bfc
+   Endereço IPv4. . . . . . . .  . . . . . . . : 192.168.0.31
+   Máscara de Sub-rede . . . . . . . . . . . . : 255.255.255.0
+   Gateway Padrão. . . . . . . . . . . . . . . : fe80::229a:7dff:feba:4543%13
+                                                 192.168.0.1
+
+Adaptador de túnel Teredo Tunneling Pseudo-Interface:
+
+   Endereço IPv6 . . . . . . . . . . : 2001:0:14c9:cd04:2ca0:3679:4ebe:114d
+   Gateway Padrão. . . . . . . . . . . . . . . :
+`
+
 describe('parseIpconfigAdapters', () => {
   it('pairs adapter names with ipv4 addresses', () => {
     const list = parseIpconfigAdapters(SAMPLE)
@@ -105,5 +136,30 @@ Ethernet adapter Ethernet 2:
     const picked = pickPrimaryIpv4(SAMPLE_PT)
     assert.equal(picked.ip, '10.10.0.47')
     assert.equal(picked.adapter, 'Ethernet Ethernet')
+  })
+
+  it('ignora Radmin VPN (26.x) listado antes da LAN de casa', () => {
+    const picked = pickPrimaryIpv4(SAMPLE_PT_HOME)
+    assert.equal(picked.ip, '192.168.0.31')
+    assert.equal(picked.adapter, 'Ethernet Ethernet')
+  })
+
+  it('prefere ZeroTier casa (172.24.x) sobre a LAN 192.168.x', () => {
+    const text = `${SAMPLE_PT_HOME}
+Adaptador Ethernet ZeroTier One [8056c2e21c000001]:
+
+   Endereço IPv4. . . . . . . .  . . . . . . . : 172.24.0.189
+   Máscara de Sub-rede . . . . . . . . . . . . : 255.255.0.0
+   Gateway Padrão. . . . . . . . . . . . . . . :
+`
+    assert.equal(pickPrimaryIpv4(text).ip, '172.24.0.189')
+  })
+})
+
+describe('parseIpconfigAdapters gateway', () => {
+  it('le o gateway IPv4 na linha de continuacao (IPv6 primeiro, PT-BR)', () => {
+    const list = parseIpconfigAdapters(SAMPLE_PT_HOME)
+    const lan = list.find((a) => a.ip === '192.168.0.31')
+    assert.equal(lan.gateway, '192.168.0.1')
   })
 })

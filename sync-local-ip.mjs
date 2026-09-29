@@ -617,7 +617,7 @@ function main() {
   const profile = profileForIp(detected)
   if (!profile) {
     const msg =
-      `IP detectado (${detected}) nao e rede empresa (10.10.0.x) nem casa (172.24.x / 10.20.x).`
+      `IP detectado (${detected}) nao e rede empresa (10.10.0.x) nem casa (172.24.x / 10.20.x / 192.168.x).`
     if (args.json || args.checkOnly) {
       console.log(
         JSON.stringify({
