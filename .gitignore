@@ -45,6 +45,6 @@ out/*
 .claude
 .claude/*
 .cursor
-.cursor
-.opencode/*
+.cursor/*
+.opencode
 .opencode/*

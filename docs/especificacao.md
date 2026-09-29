@@ -1,70 +1,92 @@
-# sync-local-ip — especificacao do projeto
+# sync-local-ip — especificação
 
-> Guia de produto e entrega deste repositorio. Complementa **`docs/context.md`** (contexto rapido para assistentes de IA).
+> **Para que serve:** contrato do produto: problema, o que é gravado, decisões e limites.
+> **Fonte da verdade:** `sync-local-ip.mjs`, `lib/network-profile.mjs`, `lib/detect-ip.mjs`, `sync-local-ip-tag.ps1`.
+> **Relacionados:** [context.md](context.md), [README.md](../README.md), [rede-e-arquivos.md](rede-e-arquivos.md), [DESIGN.md](DESIGN.md).
 
 **Ano:** 2026
+
+Pitch e quick start: [README](../README.md). Configuração, tag, CLI e troubleshooting estão nos docs irmãos. Aqui fica o que o produto se compromete a fazer.
 
 ---
 
 ## Objetivo
 
-Descreva o problema que este projeto resolve, o publico-alvo e o resultado esperado em 2 a 4 frases.
+Quem desenvolve em clones locais troca de rede (escritório, casa, VPN) e o IPv4 da máquina muda. Esse endereço aparece em `.env`, `_localVars.ts` e, em alguns times, em tabelas compartilhadas e redirects. Esquecer um arquivo deixa o app apontando para a máquina errada.
+
+Esta ferramenta, no Windows, detecta o IPv4 útil, classifica o perfil e grava o lado correspondente. A interface do dia a dia é a tag. O público-alvo é qualquer pessoa no Windows cujos projetos embutam o IP local em arquivos de texto — com integração opcional ao layout AGX (`ips/table.ts`, Serveruler) quando esses arquivos existem.
 
 ---
 
 ## Stack
 
-- **Front:** (ex.: React, Vite, TypeScript, SASS)
-- **Back:** (ex.: Node, Express) ou N/A
-- **Banco:** (ex.: MongoDB, PostgreSQL) ou N/A
-- **Tooling:** (ex.: Yarn, Node 22)
+- **Motor:** Node.js 20+, ESM, sem dependências npm.
+- **Interface:** tag WPF em PowerShell 5.1, sem console, lançada por VBS.
+- **Persistência:** JSON local. Não há banco.
+- **Testes:** `node --test`.
 
 ---
 
-## Setup e comandos locais
+## Contrato de sincronização
 
-```bash
-yarn          # instalar dependencias
-yarn dev      # desenvolvimento
-yarn build    # build de producao
-```
+Entrada: `ipconfig` ou `--ip`. Detecção: `lib/detect-ip.mjs`. Perfis: `lib/network-profile.mjs`.
 
-Em monorepo (`frontend/` + `backend/`), use os scripts da raiz (ex.: `yarn dev` com concurrently) ou entre em cada pasta conforme o README.
+| IP | Perfil | Campo opcional (tabela / data.json) | Constante opcional (redirect) |
+|----|--------|-------------------------------------|-------------------------------|
+| `10.10.0.x` | `company` | `empresa` | `COMPANY_IP_ADDRESS` |
+| `172.24.x.x` ou `10.20.x.x` | `home` | `casa` | `HOME_IP_ADDRESS` |
+| outro | nenhum | nada | nada |
+
+Destinos:
+
+- Sempre (pastas em `scanRoots` + `reposRoot`): substituição textual em `.env`, `.env.local`, `_localVars.ts`.
+- Se existirem em `reposRoot`: `ips/table.ts`, `serveruler-client/public/data.json`, `serveruler-redirect/index.html`.
+- Cópia irmã do redirect, se existir ao lado da ferramenta.
+
+URL do redirect: `http://<ip>:5173/`. Ausente ou campo vazio → skip, não cria. Detalhe operacional: [rede-e-arquivos.md](rede-e-arquivos.md).
+
+Estado em `.last-ip.json` só após sync real. A tag fica verde só sem drift no perfil atual.
 
 ---
 
-## Decisoes registradas
+## Setup
 
-| # | Tema | Decisao |
+Sem `yarn` / `npm install` / build. Quick start no [README](../README.md). Detalhe: [configuracao.md](configuracao.md). Testes: [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+---
+
+## Decisões registradas
+
+| # | Tema | Decisão |
 |---|------|---------|
-| 1 | (ex.: sem Docker na v1) | |
-| 2 | | |
-
----
-
-## Epic / issue GitHub
-
-| Item | Link |
-|------|------|
-| Epic ou issue principal | (cole a URL) |
-| Board / projeto | |
+| 1 | Onde roda | Somente Windows |
+| 2 | Dependências | Nenhuma |
+| 3 | Origem | Criado para AGX; varredura de envs em qualquer repo via `scanRoots` |
+| 4 | Perfis | Empresa e casa não compartilham campo; prefixos atuais fixos no código |
+| 5 | Prefixo `10.20` | Tratado como casa |
+| 6 | Porta do redirect | 5173, fixa |
+| 7 | Tag no logon | Atalho → VBS |
+| 8 | `reposRoot` | Exige um marcador de pasta hoje; envs extras vão em `scanRoots` |
 
 ---
 
 ## Fora de escopo
 
-- 
-- 
+- IPv6; Linux; macOS.
+- Criar linha em `ips/table.ts` quando não existe.
+- Escolher variáveis pelo nome — a troca é do texto do IP.
+- Operar processos de aplicação.
+- Prefixos de rede configuráveis pelo JSON (ainda não).
 
 ---
 
-## Relacao com outros docs
+## Relação com outros docs
 
 | Arquivo | Uso |
 |---------|-----|
-| `docs/context.md` | Stack, portas, decisoes fixas — contexto primario para IA |
-| Este arquivo | Objetivo, escopo, decisoes de produto, link da epic |
-
----
-
-*Gerado com Vieira CLI (`vieira common` ou scaffold `front` / `full` / `extension`). Epics do repositório Vieira CLI no board usam a skill `especificacao-cards` — fluxo separado.*
+| `README.md` | Pitch e quick start |
+| `docs/configuracao.md` | `config.json` |
+| `docs/rede-e-arquivos.md` | Perfis e arquivos |
+| `docs/tag.md` / `linha-de-comando.md` / `problemas-comuns.md` | Uso diário |
+| `docs/DESIGN.md` | Visual |
+| Este arquivo | Contrato |

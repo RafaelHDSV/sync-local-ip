@@ -1,131 +1,104 @@
-# DESIGN — [Product name]
+# DESIGN — tag do sync-local-ip
 
-> Visual source of truth. Code derives from here. Last updated: YYYY-MM-DD.
+> **Para que serve:** aparência e comportamento visual da faixa de IP. O código da tag deriva daqui.
+> **Fonte da verdade:** `sync-local-ip-tag.ps1`.
+> **Relacionados:** [especificacao.md](especificacao.md), [README.md](../README.md).
 
-## Direction
+Atualizado em 2026-09-29.
 
-**Thesis (one sentence):** [e.g. "A training tool that feels like an athlete's field notebook, not a SaaS dashboard."]
+## Direção
 
-| Field | Value |
+**Tese:** uma faixa de status no canto da área de trabalho, no mesmo espírito do widget de workday: legível de relance, sem janela e sem competir com o editor.
+
+| Campo | Valor |
 |-------|-------|
-| Audience | [who uses it] |
-| UI job | [what the person needs to do on this screen/flow] |
-| Tone | [e.g. direct, technical, warm, editorial] |
+| Quem usa | Quem desenvolve nos clones AGX, no Windows, o dia inteiro |
+| Função da UI | Dizer se o IP detectado já está gravado nos arquivos, e oferecer sync, mover, esconder e sair |
+| Tom | Técnico, quieto, denso. O IP é o conteúdo; não há título nem ícone de produto |
 
-## Anti-defaults
+## O que isto não é
 
-What **this** product will not be (explicit, to prevent drift in future prompts):
+- Não é página, dashboard nem componente shadcn.
+- Não usa Inter, Roboto nem paleta roxa de SaaS.
+- Não tem hero, cartão, formulário nem modo claro. A faixa é sempre escura, porque fica sobre qualquer janela.
+- Não aparece na barra de tarefas e não rouba foco (`ShowInTaskbar` falso, `ShowActivated` falso).
 
-- Rejected fonts: [e.g. Inter, Roboto, generic system-ui]
-- Rejected palettes: [e.g. SaaS purple #6366f1, cream #F4F1EA without reason]
-- Rejected layouts: [e.g. gradient hero + three identical cards]
-- Rationale: [tie to the domain]
+## Cor
 
-## Color
+Valores como estão no XAML implícito do PowerShell (canal alfa `FF`).
 
-Semantic tokens. Prefer oklch in code when the project already uses it; document hex for human readability.
+| Papel | Hex | Quando |
+|-------|-----|--------|
+| Fundo da faixa | `#2D2D30` | sempre |
+| Texto em repouso, antes do primeiro check | `#E8E8E8` | só no primeiro frame (`IP ...` ainda sem resultado) |
+| Sincronizando | `#F2C94C` | texto `IP ...` enquanto o Node roda |
+| Alinhado | `#6FCF97` | IP e `✓` |
+| Divergente ou erro com IP conhecido | `#EB5757` | IP e `✗` |
+| Sem IP utilizável | `#9E9E9E` | `sem IP` ou `erro (passe o mouse)` |
 
-| Token | Hex / oklch | Role |
-|-------|-------------|------|
-| `--background` | | main surface |
-| `--foreground` | | primary text |
-| `--primary` | | primary action, strong links |
-| `--primary-foreground` | | text on primary |
-| `--secondary` | | secondary surfaces |
-| `--muted` | | subtle backgrounds |
-| `--muted-foreground` | | secondary text |
-| `--accent` | | punctual highlight (use sparingly) |
-| `--destructive` | | error / destructive action |
-| `--border` | | dividers, input borders |
-| `--ring` | | keyboard focus |
+Não há token CSS. Quem alterar uma cor altera o `ConvertFromString` correspondente em `sync-local-ip-tag.ps1` e esta tabela no mesmo turno.
 
-**Extra surfaces (optional):** `--surface-elevated`, `--surface-inset`, `--overlay`
+Não há modo claro. A faixa não inverte com o tema do Windows.
 
-**Dark mode:** describe inversion or a parallel palette (not just "invert").
+## Tipografia
 
-## Typography
+| Papel | Família | Tamanho | Uso |
+|-------|---------|---------|-----|
+| Único | Segoe UI | 12 px | IP, marca de status, mensagens curtas de erro |
 
-| Role | Family | Weights | Use |
-|------|--------|---------|-----|
-| Display | | | titles, hero |
-| Body | | | paragraphs, UI |
-| Mono / Data | | | numbers, sets, code |
+Sem display, sem mono separado. O endereço usa a mesma fonte do resto para a faixa continuar estreita. Não há import de fonte: Segoe UI já está no Windows.
 
-**Scale (example):**
+## Espaçamento e raio
 
-| Name | Size | Line-height | Letter-spacing |
-|------|------|-------------|----------------|
-| `text-display` | | | |
-| `text-title` | | | |
-| `text-body` | | | |
-| `text-caption` | | | |
+| Token | Valor |
+|-------|-------|
+| Raio da faixa | 4 px |
+| Padding horizontal | 8 px |
+| Padding vertical | 2 px |
+| Densidade | compacta, uma linha só |
 
-**Import:** [Google Fonts URL, local `@font-face`, etc.]
+A janela tem `SizeToContent` largura e altura. Não há layout interno além do `TextBlock`.
 
-## Spacing & radius
+## Posição
 
-| Token | Value | Notes |
-|-------|-------|-------|
-| Base unit | 4px or 8px | |
-| `--radius` | | component default |
-| `--radius-sm` / `--radius-lg` | | if needed |
-| Density | compact / comfortable | card and input padding |
+A faixa nasce no canto inferior da área útil da tela, deslocada 340 px para a esquerda da borda direita (`trayOffsetPx`) e com margem inferior -35 px (`marginBottom`), de propósito à esquerda do widget de workday.
 
-## Layout
+Arrastar recalcula esses dois números a partir dessa área e grava em `ui-state.json`. Um timer de 5 segundos reaplica a posição, para a faixa não ficar órfã se a barra de tarefas ou o monitor mudar. Ela permanece `TOPMOST`.
 
-**Concept:** [one sentence — e.g. "single centered column, data in horizontal bands on mobile"]
-
-```
-┌─────────────────────────────────────┐
-│  [header / day context]             │
-├─────────────────────────────────────┤
-│  [main content]                     │
-│                                     │
-├─────────────────────────────────────┤
-│  [primary action fixed in footer?]  │
-└─────────────────────────────────────┘
+```mermaid
+flowchart LR
+  workArea[Área útil da tela]
+  workday[Widget workday na direita]
+  tag[Tag sync-local-ip]
+  workArea --> tag
+  tag --> workday
 ```
 
-- Critical breakpoints: [e.g. workout timer readable at 320px]
-- Navigation: [tabs, sidebar, bottom bar]
+## Comportamento visível
 
-## Signature
+| Momento | O que a pessoa vê |
+|---------|-------------------|
+| Abertura | `IP ...` amarelo, depois o resultado do sync |
+| Clique sem arrastar | volta ao amarelo e em seguida ao verde ou ao vermelho |
+| Arrastar | a faixa segue o ponteiro; soltar grava a posição |
+| Duplo clique | some até a meia-noite local |
+| Tooltip | só quando há `error` no JSON do Node; no vermelho com IP, o motivo está aí |
+| Cursor | mão, sobre a faixa inteira |
 
-**One memorable element:** [e.g. workout progress bar with rubber texture / scoreboard-style monospace counter]
+Não há animação de entrada, hover colorido nem transição. `prefers-reduced-motion` não se aplica: não há motion para reduzir.
 
-**Why it serves the domain:** [one-sentence justification]
+O menu de contexto (clique direito) tem três itens, nesta ordem: Sincronizar agora, Abrir pasta, Sair.
 
-## Motion
+## Mapa no código
 
-| Moment | Behavior | Duration | Reduced motion |
-|--------|----------|----------|----------------|
-| Page enter | | | |
-| Set feedback | | | |
-| Hover / focus | | | |
-
-## Components (shadcn / custom)
-
-Intentional deviations from stock shadcn:
-
-| Component | Change |
-|-----------|--------|
-| `Button` | [variants, radius, no shadow] |
-| `Card` | [border vs shadow, padding] |
-| `Input` | [height, focus] |
-
-## Code map
-
-Where tokens and styles live in the repo:
-
-| Artifact | Path |
+| Artefato | Onde |
 |----------|------|
-| CSS variables | `frontend/src/index.css` |
-| Tailwind theme | `@theme inline` or `tailwind.config.*` |
-| UI components | `frontend/src/components/ui/` |
-| Illustrations / icons | [folder] |
+| Cores, fonte, padding, raio, menu | `sync-local-ip-tag.ps1` |
+| Posição e ocultar até | `ui-state.json` (gerado na máquina, não versionado) |
+| Lançamento sem console | `sync-local-ip-startup.vbs` |
 
 ## Changelog
 
-| Date | Change |
-|------|--------|
-| YYYY-MM-DD | Initial version |
+| Data | Mudança |
+|------|---------|
+| 2026-09-29 | Primeira versão alinhada à tag WPF que já está no repositório |

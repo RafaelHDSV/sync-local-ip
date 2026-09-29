@@ -12,7 +12,7 @@ Exemplos de comportamentos que contribuem para um ambiente positivo incluem:
 - Focar no que é melhor para a comunidade
 - Demonstrar empatia pelos outros participantes
 
-Comportamentos inaceitáveis ​​incluem:
+Comportamentos inaceitáveis incluem:
 - Assédio
 - Comentários ofensivos
 - Ataques pessoais
@@ -20,7 +20,7 @@ Comportamentos inaceitáveis ​​incluem:
 
 ## Aplicação
 
-Os mantenedores do projeto são responsáveis ​​por esclarecer os padrões e podem remover ou editar contribuições que violem este código.
+Os mantenedores do projeto são responsáveis por esclarecer os padrões e podem remover ou editar contribuições que violem este código.
 
 ## Denúncia
 

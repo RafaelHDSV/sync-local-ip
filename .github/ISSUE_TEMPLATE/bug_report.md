@@ -32,11 +32,12 @@ If applicable, add screenshots.
 
 ---
 
-## 💻 Environment
+## 💻 Ambiente
 
-- OS:
-- Browser:
-- Version:
+- Windows:
+- Node.js (`node -v`):
+- Pasta da ferramenta e se `config.json` existe:
+- IP detectado na tag (sem colar `.env`):
 
 ---
 
