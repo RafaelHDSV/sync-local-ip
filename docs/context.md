@@ -12,7 +12,7 @@
 
 ## Objetivo
 
-No Windows, descobre o IPv4 útil da máquina e propaga esse IP nos arquivos locais. Nasceu no fluxo AGX (empresa `10.10.0.x` / casa `172.24.x` ou `10.20.x`, `ips/table.ts`, Serveruler), mas a varredura de `.env`, `.env.local` e `_localVars.ts` vale para **qualquer** pasta em `scanRoots`. Arquivos AGX só são tocados se existirem.
+No Windows, descobre o IPv4 útil da máquina e propaga esse IP nos arquivos locais. Nasceu no fluxo AGX (empresa `10.10.0.x` / casa `172.24.x`, `10.20.x` ou `192.168.x`, `ips/table.ts`, Serveruler), mas a varredura de `.env`, `.env.local` e `_localVars.ts` vale para **qualquer** pasta em `scanRoots`. Arquivos AGX só são tocados se existirem.
 
 Pitch e quick start: [README](../README.md). Detalhe operacional: docs listados abaixo. Este arquivo não repete o passo a passo.
 
@@ -41,7 +41,7 @@ Pitch e quick start: [README](../README.md). Detalhe operacional: docs listados 
 
 ## Decisões fixas
 
-1. Perfis empresa e casa não misturam campos. IP fora de `10.10.0`, `172.24` e `10.20` não sincroniza (prefixos atuais; nasceram na AGX).
+1. Perfis empresa e casa não misturam campos. IP fora de `10.10.0`, `172.24`, `10.20` e `192.168` não sincroniza (prefixos atuais; nasceram na AGX). O histórico de IPs em `.last-ip.json` vale entre perfis.
 2. `reposRoot` é a âncora (hoje exige um marcador `ips/` / `core/` / `serveruler-client/` / `uxvision-web/`). `scanRoots` amplia a busca de envs para qualquer clone.
 3. Só entram na varredura `.env`, `.env.local` e `_localVars.ts`.
 4. A tag sincroniza ao abrir e de hora em hora se houver drift. Duplo clique esconde até a meia-noite.

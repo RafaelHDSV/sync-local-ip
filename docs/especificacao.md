@@ -34,7 +34,7 @@ Entrada: `ipconfig` ou `--ip`. Detecção: `lib/detect-ip.mjs`. Perfis: `lib/net
 | IP | Perfil | Campo opcional (tabela / data.json) | Constante opcional (redirect) |
 |----|--------|-------------------------------------|-------------------------------|
 | `10.10.0.x` | `company` | `empresa` | `COMPANY_IP_ADDRESS` |
-| `172.24.x.x` ou `10.20.x.x` | `home` | `casa` | `HOME_IP_ADDRESS` |
+| `172.24.x.x`, `10.20.x.x` ou `192.168.x.x` | `home` | `casa` | `HOME_IP_ADDRESS` |
 | outro | nenhum | nada | nada |
 
 Destinos:
@@ -67,6 +67,8 @@ Sem `yarn` / `npm install` / build. Quick start no [README](../README.md). Detal
 | 6 | Porta do redirect | 5173, fixa |
 | 7 | Tag no logon | Atalho → VBS |
 | 8 | `reposRoot` | Exige um marcador de pasta hoje; envs extras vão em `scanRoots` |
+| 9 | Prefixo `192.168` | Tratado como casa (LAN doméstica). Fica fora da varredura por prefixo dos `.env`; só um `192.168` já gravado pela ferramenta é trocado |
+| 10 | Histórico em `.last-ip.json` | Vale entre perfis: o IP gravado na outra rede é trocado ao mudar de rede |
 
 ---
 

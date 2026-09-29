@@ -220,10 +220,10 @@ function readUserKeyIpFromFile(filePath, userKey, field = 'empresa') {
 
 function collectKnownOldIps(state, reposRoot, userKey, profile) {
   const set = new Set()
-  if (state?.ip && ipMatchesProfile(state.ip, profile)) set.add(state.ip)
-  for (const ip of state?.previousIps || []) {
-    if (ipMatchesProfile(ip, profile)) set.add(ip)
-  }
+  // Sem filtro de perfil: o historico so tem IPs que esta ferramenta gravou nesta maquina.
+  // Ao trocar de rede, o IP que esta nos .env e justamente o do outro perfil.
+  if (state?.ip) set.add(state.ip)
+  for (const ip of state?.previousIps || []) set.add(ip)
   const tableField = profile.tableField
   const fromTable = readUserKeyFieldIp(join(reposRoot, 'ips', 'table.ts'), userKey, tableField)
   if (fromTable) set.add(fromTable)
@@ -747,9 +747,7 @@ function main() {
 
   if (!args.dryRun) {
     const previousIps = [
-      ...(registered && registered !== detected && ipMatchesProfile(registered, profile)
-        ? [registered]
-        : []),
+      ...(registered && registered !== detected ? [registered] : []),
       ...oldIpList.filter((ip) => ip !== registered),
     ].filter((ip, i, arr) => arr.indexOf(ip) === i)
 

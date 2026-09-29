@@ -12,7 +12,9 @@
 | `userKey` não encontrado | Grafia diferente da tabela | Copie a chave de `ips/table.ts` |
 | Em casa a tabela não muda | Campo `casa` vazio | Cadastro na tabela do time. Envs do prefixo de casa ainda sincronizam |
 | IP é o Wi-Fi velho | Ethernet desconectado ou sem gateway esperado | Confira `ipconfig`. Ethernet no gateway `10.10.0.1` deve ganhar |
-| Tag vermelha no hotel / 4G | Prefixo fora de `10.10.0`, `172.24`, `10.20` | Esperado. Sync ao voltar à rede com esses prefixos |
+| Tag vermelha no 4G / hotspot | Prefixo fora de `10.10.0`, `172.24`, `10.20`, `192.168` | Esperado. Sync ao voltar à rede com esses prefixos |
+| Detecta `26.x` / `25.x` | Radmin VPN / Hamachi numa versão antiga | Atualize a ferramenta; essas faixas são ignoradas |
+| IP certo, mas `.env` não muda ao trocar de rede | Versão antiga descartava o histórico de outro perfil, e o IP antigo sumiu de `.last-ip.json` | Atualize. Se o IP antigo já não está em `previousIps`, acrescente-o à mão e clique na tag |
 | Faixa sumiu | Duplo clique esconde até a meia-noite | `"hiddenUntil": null` em `ui-state.json` e abra o VBS |
 | Duas faixas | VBS aberto duas vezes | Clique direito → Sair numa delas |
 | Medo de estragar `.env` | Troca ampla dentro de `scanRoots` | `--dry-run` antes; enxugue `scanRoots` se a lista assustar |

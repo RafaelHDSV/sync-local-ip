@@ -9,7 +9,7 @@ Qualquer pasta em `scanRoots` recebe o IP novo em `.env`, `.env.local` e `_local
 ## O que ele faz
 
 1. Lê o `ipconfig` e escolhe o IPv4 certo (Ethernet ou Wi-Fi; ignora WSL, VirtualBox e similares).
-2. Classifica o perfil pela faixa do IP: **empresa** (`10.10.0.x`) ou **casa** (`172.24.x` / `10.20.x`).
+2. Classifica o perfil pela faixa do IP: **empresa** (`10.10.0.x`) ou **casa** (`172.24.x` / `10.20.x` / `192.168.x`).
 3. Propaga esse IP nos arquivos configurados — envs em qualquer clone, e, quando presentes, tabela de IPs e redirect do Serveruler.
 4. Mostra o resultado numa faixa no canto da tela (a **tag**): verde quando está alinhado, vermelho quando não.
 
