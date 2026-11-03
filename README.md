@@ -1,17 +1,29 @@
-﻿# sync-local-ip
+﻿<p align="center">
+  <strong>sync-local-ip</strong>
+</p>
 
-Seu IP local muda. Seus `.env` não acompanham — até agora.
+<p align="center">
+  <strong>Seu IP local muda. Seus `.env` acompanham.</strong><br />
+  Descobre o IPv4 útil no Windows e grava nos clones — sem abrir dezenas de arquivos à mão.
+</p>
 
-**sync-local-ip** descobre o IPv4 útil desta máquina no Windows e grava esse endereço nos arquivos locais dos seus clones. Sem abrir terminal. Sem editar dezenas de arquivos à mão.
+---
 
-Qualquer pasta em `scanRoots` recebe o IP novo em `.env`, `.env.local` e `_localVars.ts`. Se existirem `ips/table.ts`, `data.json` ou o redirect do Serveruler, esses arquivos também são atualizados.
+## Por que existe
 
-## O que ele faz
+Trocar de rede (empresa ↔ casa) quebra bookmarks, Serveruler e `.env` com IP antigo. Editar tudo manualmente é o tipo de tarefa que você esquece até o serviço não abrir.
 
-1. Lê o `ipconfig` e escolhe o IPv4 certo (Ethernet ou Wi-Fi; ignora WSL, VirtualBox e similares).
-2. Classifica o perfil pela faixa do IP: **empresa** (`10.10.0.x`) ou **casa** (`172.24.x` / `10.20.x` / `192.168.x`).
-3. Propaga esse IP nos arquivos configurados — envs em qualquer clone, e, quando presentes, tabela de IPs e redirect do Serveruler.
-4. Mostra o resultado numa faixa no canto da tela (a **tag**): verde quando está alinhado, vermelho quando não.
+## O que você ganha
+
+| | |
+|---|---|
+| **Detecção** | IPv4 certo (Ethernet/Wi-Fi; ignora WSL/VirtualBox) |
+| **Perfil** | Empresa (`10.10.0.x`) vs casa (`172.24` / `10.20` / `192.168`) |
+| **Propagação** | `.env`, `.env.local`, `_localVars.ts` em `scanRoots` |
+| **Extras** | `ips/table.ts`, `data.json`, redirect do Serveruler quando existirem |
+| **Tag na tela** | Verde alinhado / vermelho desalinhado |
+
+## Como funciona
 
 ```mermaid
 flowchart LR
@@ -21,69 +33,29 @@ flowchart LR
   tag[Tag na tela] --> motor
 ```
 
-A ferramenta só lê a rede e grava arquivos no disco. Não sobe servidores, não altera a placa de rede e não envia dados para fora.
+Só lê a rede e grava arquivos locais. Não sobe servidores, não altera a placa de rede e não envia dados para fora.
 
-## Começar em 5 minutos
+## Posicionamento
 
-Requisitos: Windows 10/11 e [Node.js](https://nodejs.org/) 20+ no `PATH`.
+| sync-local-ip é | Não é |
+|---|---|
+| Propagador de IP em disco | VPN / DHCP server |
+| Companion do Serveruler | UI web de inventário |
+| Windows-first | Daemon multiplataforma completo |
+
+## Stack (em uma linha)
+
+Node 20+ · Windows · `config.json` a partir do example.
+
+Detalhes: [`docs/context.md`](docs/context.md) · rede/arquivos: [`docs/rede-e-arquivos.md`](docs/rede-e-arquivos.md) · tag: [`docs/tag.md`](docs/tag.md).
+
+## Começar
+
+Config e operação: [`docs/ambiente-e-operacao.md`](docs/ambiente-e-operacao.md) · configuração detalhada: [`docs/configuracao.md`](docs/configuracao.md) · CLI: [`docs/linha-de-comando.md`](docs/linha-de-comando.md).
 
 ```powershell
-git clone https://github.com/RafaelHDSV/sync-local-ip.git
-cd sync-local-ip
 copy config.example.json config.json
+# edite userKey, reposRoot, scanRoots
 ```
 
-Edite o `config.json`:
-
-```json
-{
-  "userKey": "seu-login",
-  "reposRoot": "C:\\caminho\\para\\seus\\clones",
-  "scanRoots": [
-    "C:\\caminho\\para\\seus\\clones",
-    "D:\\outro\\projeto"
-  ]
-}
-```
-
-- `userKey` — identificador seu (a mesma chave em `ips/table.ts`, se você usar essa tabela).
-- `reposRoot` — pasta âncora dos clones (detalhes em [configuração](docs/configuracao.md)).
-- `scanRoots` — onde varrer `.env` e `_localVars.ts`. Pode listar **qualquer** repositório.
-
-Ensaio sem gravar, depois sync de verdade:
-
-```powershell
-node sync-local-ip.mjs --dry-run
-node sync-local-ip.mjs
-```
-
-Suba a tag (sem janela de terminal):
-
-```powershell
-wscript.exe .\sync-local-ip-startup.vbs
-```
-
-Para abrir no logon: `.\install-startup.ps1`. Remover: `.\uninstall-startup.ps1`.
-
-Clique na tag = sincronizar agora. Verde = IP nos arquivos bate com a máquina. Vermelho = passe o mouse no tooltip.
-
-## Documentação
-
-| Doc | Conteúdo |
-|-----|----------|
-| [Configuração](docs/configuracao.md) | `config.json`, caminhos, `userKey`, vários discos |
-| [Rede e arquivos](docs/rede-e-arquivos.md) | Perfis empresa/casa, o que é gravado, como o IP é escolhido |
-| [Tag](docs/tag.md) | Cores, cliques, logon, `ui-state.json` |
-| [Linha de comando](docs/linha-de-comando.md) | Flags do `.mjs` e do `.ps1` |
-| [Problemas comuns](docs/problemas-comuns.md) | Sintoma → causa → ação |
-| [Especificação](docs/especificacao.md) | Contrato do produto |
-| [DESIGN](docs/DESIGN.md) | Visual da tag |
-| [Contribuir](CONTRIBUTING.md) | Testes e pull request |
-
-## Licença
-
-MIT — veja [LICENSE](LICENSE).
-
----
-
-Comunidade: [CHANGELOG](CHANGELOG.md) · [CONTRIBUTING](CONTRIBUTING.md) · [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md)
+Contribuição: [`CONTRIBUTING.md`](CONTRIBUTING.md) · conduta: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) · mudanças: [`CHANGELOG.md`](CHANGELOG.md).
