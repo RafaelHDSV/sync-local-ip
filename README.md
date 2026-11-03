@@ -1,4 +1,4 @@
-# sync-local-ip
+﻿# sync-local-ip
 
 Seu IP local muda. Seus `.env` não acompanham — até agora.
 
@@ -83,3 +83,7 @@ Clique na tag = sincronizar agora. Verde = IP nos arquivos bate com a máquina. 
 ## Licença
 
 MIT — veja [LICENSE](LICENSE).
+
+---
+
+Comunidade: [CHANGELOG](CHANGELOG.md) · [CONTRIBUTING](CONTRIBUTING.md) · [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md)
