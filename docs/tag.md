@@ -4,7 +4,7 @@
 > **Fonte da verdade:** `sync-local-ip-tag.ps1`, `sync-local-ip-startup.vbs`, `install-startup.ps1`.
 > **Relacionados:** [DESIGN.md](DESIGN.md), [linha-de-comando.md](linha-de-comando.md), [problemas-comuns.md](problemas-comuns.md).
 
-A tag é uma faixa sempre por cima, sem ícone na barra de tarefas. Ao abrir, já sincroniza. De hora em hora, se o check acusar divergência, sincroniza de novo.
+A tag é uma faixa sempre por cima, sem ícone na barra de tarefas. Ao abrir, já sincroniza (exceto no primeiro uso da máquina, quando ela espera a sua aprovação no terminal). De hora em hora, se o check acusar divergência, sincroniza de novo.
 
 ## Subir e instalar no logon
 
@@ -24,6 +24,7 @@ Uma instância basta. Dois duplos cliques no VBS abrem duas faixas.
 |---------------|-------------|
 | `IP ...` em amarelo | Sync em andamento |
 | IP e `✓` em verde | Estado e arquivos alinhados com o IP detectado |
+| IP e `1o uso` em laranja | Primeiro uso nesta máquina: **nada foi gravado**. Rode `node sync-local-ip.mjs` no terminal desta pasta, revise o resumo e aprove. Depois a faixa sincroniza sozinha |
 | IP e `✗` em vermelho | Há IP, mas ainda há drift ou erro — tooltip no mouse |
 | `erro (passe o mouse)` | Falha sem IP útil, ou Node fora do `PATH` |
 | `sem IP` | `ipconfig` sem IPv4 útil |

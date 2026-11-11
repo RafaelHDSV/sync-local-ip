@@ -6,6 +6,11 @@
 | Sintoma | O que está acontecendo | O que fazer |
 |---------|------------------------|-------------|
 | `erro (passe o mouse)` ou IP vermelho com tooltip | `config.json` ausente, `userKey` vazio, `reposRoot` inválido, ou `node` fora do `PATH` | Leia o tooltip. `node -v` num terminal novo. Confira o JSON |
+| Faixa laranja `1o uso` / `Erro: primeiro uso nesta maquina` | Máquina sem `.last-ip.json`: a primeira gravação precisa de aprovação. A tag e scripts não gravam sozinhos | Rode `node sync-local-ip.mjs` num terminal, revise o resumo e responda `s`. Em automação, `--yes` ([linha-de-comando.md](linha-de-comando.md#primeiro-uso)) |
+| Um `.env` apontando para servidor/banco compartilhado foi trocado pelo seu IP | A troca é textual e pega qualquer IP das faixas AGX | Restaure o valor e coloque o endereço em `ignoreIps` ([configuracao.md](configuracao.md#ignoreips)) |
+| `config.json invalido (…)` | JSON quebrado: barra invertida sem escape, vírgula sobrando ou aspas faltando | Use `/` nos caminhos ou `\\`. A mensagem traz o erro do JSON |
+| `"userKey" ainda e o do exemplo` / `ainda tem SEU_USUARIO` | O `config.json` ainda tem os valores do `config.example.json` | Troque pela sua chave e pelos seus caminhos ([onboarding](onboarding.md), passo 3) |
+| `git pull` diz que o `config.json` seria sobrescrito | Instalação antiga: o arquivo ainda era versionado | [Atualizando uma instalação antiga](onboarding.md#atualizando-uma-instalação-antiga) |
 | `reposRoot nao encontrado` / `invalido` | Âncora sem marcadores ou caminho errado | Caminho absoluto no `config.json` (`\\`). Veja [configuração](configuracao.md) |
 | Tag verde e `.env` ainda velho | Fora de `scanRoots`, ou nome diferente de `.env` / `.env.local` | Inclua a pasta; `--dry-run --verbose`; clique na tag |
 | Disco / outro clone não muda | Pasta inexistente em `scanRoots` (ignorada) | Corrija o caminho; confira a linha `scanRoots` do dry-run |

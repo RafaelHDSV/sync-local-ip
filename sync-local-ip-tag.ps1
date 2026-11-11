@@ -22,6 +22,7 @@ $script:DisplayIp = '...'
 $script:Match = $true
 $script:HasIp = $true
 $script:ErrorText = $null
+$script:NeedsFirstRun = $false
 
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
@@ -203,6 +204,15 @@ function Update-OverlayDisplay {
         return
     }
 
+    if ($script:NeedsFirstRun -and -not $script:ErrorText) {
+        $textBlock.Text = ('{0}  1o uso' -f $script:DisplayIp)
+        $textBlock.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString('#FFF2994A')
+        $border.ToolTip = 'Primeiro uso nesta maquina: nada foi gravado. Rode "node sync-local-ip.mjs" no terminal desta pasta, revise o resumo e aprove (s). Depois a faixa sincroniza sozinha.'
+        Update-OverlayPosition
+        Set-OverlayAlwaysOnTop
+        return
+    }
+
     if ($script:Match) {
         $mark = [string][char]0x2713
         $textBlock.Text = ('{0}  {1}' -f $script:DisplayIp, $mark)
@@ -220,6 +230,8 @@ function Update-OverlayDisplay {
 function Apply-CheckResult {
     param($Result)
     $script:ErrorText = if ($Result -and $Result.error) { [string]$Result.error } else { $null }
+    # Primeiro uso: o motor nao grava sozinho; a pessoa aprova no terminal (ver docs/onboarding.md).
+    $script:NeedsFirstRun = [bool]($Result -and $Result.needsFirstRun)
     if (-not $Result -or -not $Result.detected) {
         $script:HasIp = $false
         $script:Match = $false

@@ -33,6 +33,7 @@ Valores como estão no XAML implícito do PowerShell (canal alfa `FF`).
 | Texto em repouso, antes do primeiro check | `#E8E8E8` | só no primeiro frame (`IP ...` ainda sem resultado) |
 | Sincronizando | `#F2C94C` | texto `IP ...` enquanto o Node roda |
 | Alinhado | `#6FCF97` | IP e `✓` |
+| Primeiro uso, aguardando aprovação no terminal | `#F2994A` | IP e `1o uso` (nada foi gravado) |
 | Divergente ou erro com IP conhecido | `#EB5757` | IP e `✗` |
 | Sem IP utilizável | `#9E9E9E` | `sem IP` ou `erro (passe o mouse)` |
 
@@ -82,7 +83,7 @@ flowchart LR
 | Clique sem arrastar | volta ao amarelo e em seguida ao verde ou ao vermelho |
 | Arrastar | a faixa segue o ponteiro; soltar grava a posição |
 | Duplo clique | some até a meia-noite local |
-| Tooltip | só quando há `error` no JSON do Node; no vermelho com IP, o motivo está aí |
+| Tooltip | quando há `error` no JSON do Node (no vermelho com IP, o motivo está aí) e no estado `1o uso` (o que fazer no terminal) |
 | Cursor | mão, sobre a faixa inteira |
 
 Não há animação de entrada, hover colorido nem transição. `prefers-reduced-motion` não se aplica: não há motion para reduzir.

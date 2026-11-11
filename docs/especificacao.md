@@ -47,6 +47,8 @@ URL do redirect: `http://<ip>:5173/`. Ausente ou campo vazio → skip, não cria
 
 Estado em `.last-ip.json` só após sync real. A tag fica verde só sem drift no perfil atual.
 
+**Primeiro uso:** sem `.last-ip.json`, o primeiro sync real precisa de aprovação (terminal interativo: resumo + pergunta; `--yes` para automação). A tag e o `--json` não gravam e sinalizam `needsFirstRun`. `config.ignoreIps` lista IPs que nunca são trocados nem contam como drift.
+
 ---
 
 ## Setup
@@ -70,6 +72,10 @@ Sem `yarn` / `npm install` / build. Quick start no [README](../README.md). Detal
 | 9 | Prefixo `192.168` | Tratado como casa (LAN doméstica). Fica fora da varredura por prefixo dos `.env`; só um `192.168` já gravado pela ferramenta é trocado |
 | 10 | Histórico em `.last-ip.json` | Vale entre perfis: o IP gravado na outra rede é trocado ao mudar de rede |
 | 11 | Varredura dos `.env` | Procura os prefixos AGX de todos os perfis (`10.10.0`, `172.24`, `10.20`) em qualquer rede, para a troca não depender da tabela nem do histórico |
+| 12 | Primeiro uso | A primeira gravação numa máquina é aprovada por uma pessoa. A tag nunca faz a primeira gravação |
+| 13 | `ignoreIps` | Lista opcional no `config.json`: IPv4 que a varredura nunca troca. É a saída para servidor compartilhado, não uma lista de nomes de variável |
+| 14 | `config.json` | Pessoal e fora do Git; recusado se ainda tiver os valores do exemplo |
+| 15 | Troca por IP inteiro | A troca e a detecção de drift casam o endereço completo (fronteira de IP), em passada única. Um IP antigo nunca casa dentro de outro IP |
 
 ---
 

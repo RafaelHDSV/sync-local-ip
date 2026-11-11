@@ -13,6 +13,8 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pickPrimaryIpv4 } from './lib/detect-ip.mjs'
+import { firstRunAction, askYesNo } from './lib/first-run.mjs'
+import { containsAnyIp, replaceIps } from './lib/ip-text.mjs'
 import { profileForIp, ipMatchesProfile, ENV_SCAN_PATTERNS } from './lib/network-profile.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -45,6 +47,7 @@ function parseArgs(argv) {
     checkOnly: false,
     json: false,
     help: false,
+    yes: false,
   }
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
@@ -58,6 +61,8 @@ function parseArgs(argv) {
       args.checkOnly = true
     } else if (arg === '--json') {
       args.json = true
+    } else if (arg === '--yes' || arg === '-y') {
+      args.yes = true
     } else if (arg === '--help' || arg === '-h') {
       args.help = true
     }
@@ -65,14 +70,76 @@ function parseArgs(argv) {
   return args
 }
 
+const CONFIG_GUIDE = 'docs/onboarding.md'
+const FIRST_RUN_MESSAGE =
+  'Primeiro uso nesta maquina: nada foi gravado. Rode "node sync-local-ip.mjs" no terminal desta pasta, ' +
+  'revise o resumo e aprove (s). Depois a sincronizacao fica automatica.'
+const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/
+/**
+ * IPs de config.ignoreIps (servidor compartilhado, banco...): nunca sao trocados e nao contam
+ * como drift. Preenchido por main() depois de ler o config.
+ */
+const ignoredIps = new Set()
+const isIgnoredIp = (ip) => ignoredIps.has(ip)
+/** Valores de config.example.json: se sobrarem no config.json, o dev esqueceu de editar. */
+const EXAMPLE_USER_KEY = 'seu-login'
+const EXAMPLE_PATH_MARKER = 'SEU_USUARIO'
+
 function loadConfig() {
   const path = join(__dirname, 'config.json')
   if (!existsSync(path)) {
-    throw new Error('config.json ausente. Crie com { "userKey": "seu-login" }.')
+    throw new Error(
+      'config.json ausente. Copie config.example.json para config.json e preencha "userKey" ' +
+        `e "reposRoot". Passo a passo: ${CONFIG_GUIDE}`
+    )
   }
-  const config = JSON.parse(readFileSync(path, 'utf8'))
+  // Editores antigos e o Set-Content -Encoding UTF8 do PowerShell 5.1 gravam BOM, que o JSON.parse recusa.
+  const text = readFileSync(path, 'utf8').replace(/^\uFEFF/, '')
+  let config
+  try {
+    config = JSON.parse(text)
+  } catch (error) {
+    throw new Error(
+      `config.json invalido (${error.message}). Causas comuns: barra invertida sem escape ` +
+        '(use "C:/pasta" ou "C:\\\\pasta"), virgula sobrando ou aspas faltando. ' +
+        `Passo a passo: ${CONFIG_GUIDE}`
+    )
+  }
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    throw new Error(`config.json: o conteudo deve ser um objeto JSON. Passo a passo: ${CONFIG_GUIDE}`)
+  }
   if (!config.userKey || typeof config.userKey !== 'string') {
-    throw new Error('config.json: "userKey" e obrigatorio.')
+    throw new Error(`config.json: "userKey" e obrigatorio. Passo a passo: ${CONFIG_GUIDE}`)
+  }
+  if (config.userKey === EXAMPLE_USER_KEY) {
+    throw new Error(
+      `config.json: "userKey" ainda e o do exemplo ("${EXAMPLE_USER_KEY}"). ` +
+        `Troque pela sua chave. Passo a passo: ${CONFIG_GUIDE}`
+    )
+  }
+  if (config.ignoreIps !== undefined) {
+    if (!Array.isArray(config.ignoreIps)) {
+      throw new Error('config.json: "ignoreIps" deve ser uma lista de IPv4, ex.: ["10.10.0.5"].')
+    }
+    const invalid = config.ignoreIps.find((ip) => typeof ip !== 'string' || !IPV4_RE.test(ip.trim()))
+    if (invalid !== undefined) {
+      throw new Error(
+        `config.json: "ignoreIps" tem uma entrada que nao e IPv4: ${JSON.stringify(invalid)}. ` +
+          'Use so enderecos como "10.10.0.5".'
+      )
+    }
+  }
+  const paths = [
+    ['reposRoot', config.reposRoot],
+    ...(Array.isArray(config.scanRoots) ? config.scanRoots.map((p, i) => [`scanRoots[${i}]`, p]) : []),
+  ]
+  for (const [field, value] of paths) {
+    if (typeof value === 'string' && value.includes(EXAMPLE_PATH_MARKER)) {
+      throw new Error(
+        `config.json: "${field}" ainda tem ${EXAMPLE_PATH_MARKER} do exemplo. ` +
+          `Troque pelo caminho real. Passo a passo: ${CONFIG_GUIDE}`
+      )
+    }
   }
   return config
 }
@@ -206,12 +273,25 @@ function readUserKeyFieldIp(filePath, userKey, field) {
     }
     return null
   }
-  const pattern = new RegExp(
-    `${escapeRegExp(userKey)}:\\s*\\{[^}]*?${escapeRegExp(field)}:\\s*"([\\d.]+)"`,
+  const match = text.match(userKeyFieldPattern(userKey, field))
+  return match ? match[4] : null
+}
+
+/**
+ * Acha `<chave>: { ... <campo>: '<ip>' }` em ips/table.ts.
+ * - IP com aspas simples, duplas ou crase (a tabela real usa simples).
+ * - Chave simples ou entre aspas, com hifen (`'ana-b': {`).
+ * - Fronteira de palavra: a chave `ana` nao casa dentro de `joana:`, nem o campo
+ *   `empresa` dentro de `xempresa:`.
+ * Grupos: 1 = tudo ate a aspa de abertura do IP, 4 = o IP, 5 = a aspa de fechamento.
+ */
+function userKeyFieldPattern(userKey, field) {
+  const key = escapeRegExp(userKey)
+  const name = escapeRegExp(field)
+  return new RegExp(
+    `((?<![\\w-])(["'\`]?)${key}\\2\\s*:\\s*\\{[^}]*?(?<![\\w-])${name}\\s*:\\s*(["'\`]))([\\d.]+)(\\3)`,
     's'
   )
-  const match = text.match(pattern)
-  return match ? match[1] : null
 }
 
 function readUserKeyIpFromFile(filePath, userKey, field = 'empresa') {
@@ -281,7 +361,7 @@ function workspaceContainsAnyIp(scanRoots, ips) {
     } catch {
       continue
     }
-    if (ips.some((ip) => text.includes(ip))) return true
+    if (containsAnyIp(text, ips)) return true
   }
   return false
 }
@@ -293,7 +373,7 @@ function readCrossProfileIp(reposRoot, userKey, profile) {
 
 function envContainsOppositeProfileIp(reposRoot, scanRoots, userKey, profile) {
   const crossIp = readCrossProfileIp(reposRoot, userKey, profile)
-  if (!crossIp) return false
+  if (!crossIp || isIgnoredIp(crossIp)) return false
   return workspaceContainsAnyIp(scanRoots, [crossIp])
 }
 
@@ -318,7 +398,7 @@ function hasWorkspaceDrift(reposRoot, scanRoots, userKey, detected, profile, sta
   const staleCandidates = [
     ...collectKnownOldIps(state, reposRoot, userKey, profile),
     ...findStaleIpsInWorkspace(scanRoots, detected, profile),
-  ].filter((ip, index, arr) => ip !== detected && arr.indexOf(ip) === index)
+  ].filter((ip, index, arr) => ip !== detected && !isIgnoredIp(ip) && arr.indexOf(ip) === index)
 
   return workspaceContainsAnyIp(scanRoots, staleCandidates)
 }
@@ -331,7 +411,7 @@ function buildOldIpList(state, reposRoot, scanRoots, userKey, detected, profile)
   const crossIp = readCrossProfileIp(reposRoot, userKey, profile)
   if (crossIp) set.add(crossIp)
   set.delete(detected)
-  return [...set].filter((ip) => ip && ip !== detected)
+  return [...set].filter((ip) => ip && ip !== detected && !isIgnoredIp(ip))
 }
 
 function isFullySynced(reposRoot, scanRoots, userKey, detected, profile, state) {
@@ -419,20 +499,6 @@ function labelForScanRootFile(filePath, scanRoots) {
   return filePath
 }
 
-function replaceIpInText(text, oldIps, newIp) {
-  let result = text
-  let total = 0
-  for (const oldIp of oldIps) {
-    if (oldIp === newIp) continue
-    const count = result.split(oldIp).length - 1
-    if (count > 0) {
-      result = result.split(oldIp).join(newIp)
-      total += count
-    }
-  }
-  return { text: result, replacements: total }
-}
-
 function updateFileWithIpReplace(filePath, oldIps, newIp, dryRun, verbose, label, quiet) {
   if (!existsSync(filePath)) {
     if (verbose && !quiet) console.log(`  skip (ausente): ${filePath}`)
@@ -440,13 +506,12 @@ function updateFileWithIpReplace(filePath, oldIps, newIp, dryRun, verbose, label
   }
 
   const original = readFileSync(filePath, 'utf8')
-  const hasOldIp = oldIps.some((ip) => original.includes(ip))
-  if (!hasOldIp) {
+  if (!containsAnyIp(original, oldIps)) {
     if (verbose && !quiet) console.log(`  ok (sem IP anterior): ${filePath}`)
     return { updated: false, replacements: 0 }
   }
 
-  const { text, replacements } = replaceIpInText(original, oldIps, newIp)
+  const { text, replacements } = replaceIps(original, oldIps, newIp)
   if (replacements === 0) {
     if (verbose && !quiet) console.log(`  ok (sem mudanca): ${filePath}`)
     return { updated: false, replacements: 0 }
@@ -464,10 +529,7 @@ function updateIpsTable(filePath, userKey, field, newIp, dryRun, quiet) {
   }
 
   const original = readFileSync(filePath, 'utf8')
-  const pattern = new RegExp(
-    `(${escapeRegExp(userKey)}:\\s*\\{[^}]*?${escapeRegExp(field)}:\\s*")([\\d.]+)(")`,
-    's'
-  )
+  const pattern = userKeyFieldPattern(userKey, field)
   const match = original.match(pattern)
   if (!match) {
     if (!quiet) {
@@ -476,13 +538,16 @@ function updateIpsTable(filePath, userKey, field, newIp, dryRun, quiet) {
     return false
   }
 
-  const currentIp = match[2]
+  const currentIp = match[4]
   if (currentIp === newIp) {
     if (!quiet) console.log(`  ok ips/table.ts (sem mudanca): ${filePath}`)
     return false
   }
 
-  const updated = original.replace(pattern, `$1${newIp}$3`)
+  // Funcao, nao string: "$1" + IP comecando em digito viraria "$11".
+  const updated = original.replace(pattern, (_all, prefix, _keyQuote, _ipQuote, _ip, closing) => {
+    return `${prefix}${newIp}${closing}`
+  })
   if (!dryRun) writeFileSync(filePath, updated, 'utf8')
   if (!quiet) {
     console.log(`  ${dryRun ? '[dry-run] ' : ''}ips/table.ts ${userKey}.${field} ${currentIp} -> ${newIp}`)
@@ -566,13 +631,18 @@ Opcoes:
   --json         Saida JSON (com --check-only ou no fim do sync)
   --dry-run      Mostra mudancas sem gravar
   --verbose      Lista arquivos ignorados
+  --yes, -y      Nao pergunta no primeiro uso (maquina sem .last-ip.json)
   -h, --help     Esta ajuda
 
-config.json minimo: { "userKey": "seu-login" }
+Primeiro uso: sem .last-ip.json o terminal mostra o resumo e pergunta antes de gravar;
+a tag (--json) e scripts nao gravam ate voce aprovar (ou usar --yes).
+
+config.json minimo: { "userKey": "<sua chave>" } (copie de config.example.json)
+Opcional: "ignoreIps": ["10.10.0.5"] = IPs que nunca sao trocados (servidor compartilhado)
 `)
 }
 
-function buildCheckPayload({ detected, registered, adapter, match, profile }) {
+function buildCheckPayload({ detected, registered, adapter, match, profile, needsFirstRun }) {
   return {
     ok: Boolean(detected),
     detected: detected || null,
@@ -580,6 +650,7 @@ function buildCheckPayload({ detected, registered, adapter, match, profile }) {
     profile: profile?.id || null,
     match: Boolean(match),
     adapter: adapter || null,
+    needsFirstRun: Boolean(needsFirstRun),
   }
 }
 
@@ -623,6 +694,7 @@ function main() {
   runContext.registered = state?.ip || null
 
   const config = loadConfig()
+  for (const ip of config.ignoreIps || []) ignoredIps.add(ip.trim())
   const reposRoot = resolveReposRoot(config)
   const scanRoots = resolveScanRoots(config, reposRoot)
 
@@ -650,10 +722,11 @@ function main() {
   }
 
   const registered = state?.ip || null
+  const firstRun = !state
   const match = isFullySynced(reposRoot, scanRoots, config.userKey, detected, profile, state)
 
   if (args.checkOnly) {
-    const payload = buildCheckPayload({ detected, registered, adapter, match, profile })
+    const payload = buildCheckPayload({ detected, registered, adapter, match, profile, needsFirstRun: firstRun })
     if (args.json) {
       console.log(JSON.stringify(payload))
     } else {
@@ -681,107 +754,148 @@ function main() {
     process.exit(0)
   }
 
-  const oldIpList = buildOldIpList(state, reposRoot, scanRoots, config.userKey, detected, profile)
+  // Primeiro uso (sem .last-ip.json): a troca nos .env e ampla, entao uma pessoa revisa antes de gravar.
+  const action = firstRunAction({
+    firstRun,
+    yes: args.yes,
+    dryRun: args.dryRun,
+    checkOnly: args.checkOnly,
+    json: args.json,
+    interactive: Boolean(process.stdin.isTTY && process.stdout.isTTY),
+  })
+  if (action === 'skip') {
+    if (args.json) {
+      console.log(
+        JSON.stringify({
+          ...buildCheckPayload({ detected, registered, adapter, match: false, profile, needsFirstRun: true }),
+          synced: false,
+          skipped: true,
+          message: FIRST_RUN_MESSAGE,
+        })
+      )
+      process.exit(0)
+    }
+    console.error(
+      'Erro: primeiro uso nesta maquina. A troca nos .env e ampla e precisa de aprovacao. ' +
+        'Rode em um terminal interativo (mostra o resumo e pergunta) ou use --yes.'
+    )
+    process.exit(1)
+  }
 
-  if (!args.json) {
-    console.log(`IP detectado: ${detected} (${adapter}, rede ${profile.label})`)
-    console.log(`reposRoot (ips/Serveruler): ${reposRoot}`)
-    console.log(`scanRoots (.env / _localVars): ${scanRoots.join('; ')}`)
-    if (oldIpList.length) {
-      console.log(`Substituindo: ${oldIpList.join(', ')} -> ${detected}`)
+  const applySync = (dryRun) => {
+    const oldIpList = buildOldIpList(state, reposRoot, scanRoots, config.userKey, detected, profile)
+
+    if (!args.json) {
+      console.log(`IP detectado: ${detected} (${adapter}, rede ${profile.label})`)
+      console.log(`reposRoot (ips/Serveruler): ${reposRoot}`)
+      console.log(`scanRoots (.env / _localVars): ${scanRoots.join('; ')}`)
+      if (oldIpList.length) {
+        console.log(`Substituindo: ${oldIpList.join(', ')} -> ${detected}`)
+      } else {
+        console.log('Nenhum IP anterior conhecido — atualizando tables/Serveruler pelo userKey.')
+      }
+    }
+
+    const quiet = Boolean(args.json)
+    const { envFiles, localVarsFiles } = discoverTargetFiles(scanRoots, args.verbose)
+
+    let fileUpdates = 0
+    let replacementCount = 0
+
+    if (!quiet) console.log('\n.env / .env.local (auto):')
+    for (const filePath of envFiles.sort()) {
+      const rel = labelForScanRootFile(filePath, scanRoots)
+      const result = updateFileWithIpReplace(
+        filePath,
+        oldIpList,
+        detected,
+        dryRun,
+        args.verbose,
+        rel,
+        quiet
+      )
+      if (result.updated) fileUpdates += 1
+      replacementCount += result.replacements
+    }
+
+    if (!quiet) console.log('\n_localVars.ts (auto):')
+    for (const filePath of localVarsFiles.sort()) {
+      const rel = labelForScanRootFile(filePath, scanRoots)
+      const result = updateFileWithIpReplace(
+        filePath,
+        oldIpList,
+        detected,
+        dryRun,
+        args.verbose,
+        rel,
+        quiet
+      )
+      if (result.updated) fileUpdates += 1
+      replacementCount += result.replacements
+    }
+
+    if (!quiet) console.log('\nServeruler / ips:')
+    updateIpsTable(
+      join(reposRoot, 'ips', 'table.ts'),
+      config.userKey,
+      profile.tableField,
+      detected,
+      dryRun,
+      quiet
+    )
+    const redirectPaths = [
+      join(reposRoot, 'serveruler-redirect', 'index.html'),
+      resolve(__dirname, '../serveruler-redirect/index.html'),
+    ]
+    for (const redirectPath of redirectPaths) {
+      updateServerulerRedirect(redirectPath, detected, profile.redirectConst, dryRun, quiet)
+    }
+    updateServerulerDataJson(
+      join(reposRoot, 'serveruler-client', 'public', 'data.json'),
+      config.userKey,
+      profile.tableField,
+      detected,
+      dryRun,
+      quiet
+    )
+
+    if (!dryRun) {
+      const previousIps = [
+        ...(registered && registered !== detected ? [registered] : []),
+        ...oldIpList.filter((ip) => ip !== registered),
+      ].filter((ip, i, arr) => arr.indexOf(ip) === i)
+
+      saveState({ ip: detected, profile: profile.id, previousIps, adapter })
+    }
+
+    if (args.json) {
+      console.log(
+        JSON.stringify({
+          ...buildCheckPayload({ detected, registered, adapter, match: false, profile }),
+          synced: !dryRun,
+          dryRun: dryRun,
+          fileUpdates,
+          replacementCount,
+        })
+      )
     } else {
-      console.log('Nenhum IP anterior conhecido — atualizando tables/Serveruler pelo userKey.')
+      console.log(
+        `\nConcluido: ${fileUpdates} arquivo(s) alterado(s), ${replacementCount} substituicao(oes) de IP.`
+      )
+      if (dryRun) console.log('(dry-run — nenhum arquivo gravado)')
     }
   }
 
-  const quiet = Boolean(args.json)
-  const { envFiles, localVarsFiles } = discoverTargetFiles(scanRoots, args.verbose)
-
-  let fileUpdates = 0
-  let replacementCount = 0
-
-  if (!quiet) console.log('\n.env / .env.local (auto):')
-  for (const filePath of envFiles.sort()) {
-    const rel = labelForScanRootFile(filePath, scanRoots)
-    const result = updateFileWithIpReplace(
-      filePath,
-      oldIpList,
-      detected,
-      args.dryRun,
-      args.verbose,
-      rel,
-      quiet
-    )
-    if (result.updated) fileUpdates += 1
-    replacementCount += result.replacements
+  if (action === 'prompt') {
+    console.log('Primeiro uso nesta maquina: revise o que sera trocado antes de gravar.\n')
+    applySync(true)
+    if (!askYesNo('\nAplicar estas mudancas? [s/N] ')) {
+      console.log('Nada foi gravado. Ajuste scanRoots / ignoreIps no config.json e rode de novo.')
+      process.exit(0)
+    }
+    console.log('')
   }
-
-  if (!quiet) console.log('\n_localVars.ts (auto):')
-  for (const filePath of localVarsFiles.sort()) {
-    const rel = labelForScanRootFile(filePath, scanRoots)
-    const result = updateFileWithIpReplace(
-      filePath,
-      oldIpList,
-      detected,
-      args.dryRun,
-      args.verbose,
-      rel,
-      quiet
-    )
-    if (result.updated) fileUpdates += 1
-    replacementCount += result.replacements
-  }
-
-  if (!quiet) console.log('\nServeruler / ips:')
-  updateIpsTable(
-    join(reposRoot, 'ips', 'table.ts'),
-    config.userKey,
-    profile.tableField,
-    detected,
-    args.dryRun,
-    quiet
-  )
-  const redirectPaths = [
-    join(reposRoot, 'serveruler-redirect', 'index.html'),
-    resolve(__dirname, '../serveruler-redirect/index.html'),
-  ]
-  for (const redirectPath of redirectPaths) {
-    updateServerulerRedirect(redirectPath, detected, profile.redirectConst, args.dryRun, quiet)
-  }
-  updateServerulerDataJson(
-    join(reposRoot, 'serveruler-client', 'public', 'data.json'),
-    config.userKey,
-    profile.tableField,
-    detected,
-    args.dryRun,
-    quiet
-  )
-
-  if (!args.dryRun) {
-    const previousIps = [
-      ...(registered && registered !== detected ? [registered] : []),
-      ...oldIpList.filter((ip) => ip !== registered),
-    ].filter((ip, i, arr) => arr.indexOf(ip) === i)
-
-    saveState({ ip: detected, profile: profile.id, previousIps, adapter })
-  }
-
-  if (args.json) {
-    console.log(
-      JSON.stringify({
-        ...buildCheckPayload({ detected, registered, adapter, match: false, profile }),
-        synced: !args.dryRun,
-        dryRun: args.dryRun,
-        fileUpdates,
-        replacementCount,
-      })
-    )
-  } else {
-    console.log(
-      `\nConcluido: ${fileUpdates} arquivo(s) alterado(s), ${replacementCount} substituicao(oes) de IP.`
-    )
-    if (args.dryRun) console.log('(dry-run — nenhum arquivo gravado)')
-  }
+  applySync(args.dryRun)
 }
 
 /** Preenchido por main() para o catch conseguir responder em JSON. */

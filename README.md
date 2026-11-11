@@ -51,11 +51,19 @@ Detalhes: [`docs/context.md`](docs/context.md) · rede/arquivos: [`docs/rede-e-a
 
 ## Começar
 
-Config e operação: [`docs/ambiente-e-operacao.md`](docs/ambiente-e-operacao.md) · configuração detalhada: [`docs/configuracao.md`](docs/configuracao.md) · CLI: [`docs/linha-de-comando.md`](docs/linha-de-comando.md).
+**Primeira vez?** Siga o [onboarding passo a passo](docs/onboarding.md) (cerca de 15 minutos, do clone até a faixa verde no logon).
+
+Resumo:
 
 ```powershell
-copy config.example.json config.json
-# edite userKey, reposRoot, scanRoots
+cd <pasta-dos-seus-clones>\.tools
+git clone https://github.com/RafaelHDSV/sync-local-ip.git
+cd sync-local-ip
+# crie o SEU config.json (passo 3 do onboarding); ele não vem no clone
+node sync-local-ip.mjs --dry-run   # só mostra o que mudaria
+node sync-local-ip.mjs             # 1º uso: mostra o resumo e pergunta antes de gravar
 ```
+
+Depois: configuração detalhada em [`docs/configuracao.md`](docs/configuracao.md) · operação em [`docs/ambiente-e-operacao.md`](docs/ambiente-e-operacao.md) · CLI em [`docs/linha-de-comando.md`](docs/linha-de-comando.md) · problemas em [`docs/problemas-comuns.md`](docs/problemas-comuns.md).
 
 Contribuição: [`CONTRIBUTING.md`](CONTRIBUTING.md) · conduta: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) · mudanças: [`CHANGELOG.md`](CHANGELOG.md).

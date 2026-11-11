@@ -43,7 +43,9 @@ Somam-se a eles:
 
 Um `192.168.x` que a ferramenta não conhece não é mexido. A varredura por prefixo não inclui `192.168`, porque trocaria o `vEthernet` do Hyper-V, IPs de Docker e aparelhos da LAN.
 
-A troca é do **texto do número**, em qualquer lugar do arquivo. Não há lista de nomes de variável. Se um `.env` dentro de `scanRoots` tiver o `10.10.0.x` ou o `172.24.x` de outra pessoa, esse número vira o seu, em qualquer rede. Não aponte `scanRoots` para pastas de exemplo ou de outro login se esses arquivos não devem seguir o seu IP.
+Os IPs listados em `ignoreIps` (`config.json`) saem de tudo isso: nunca são trocados e não contam como drift. É a saída para o IP de um servidor compartilhado que cai numa dessas faixas.
+
+A troca é do **texto do número**, em qualquer lugar do arquivo, mas sempre pelo **endereço inteiro** e em passada única: `10.10.0.5` não pega `10.10.0.55` nem `1192.168.0.5`, e o texto recém-trocado não é trocado de novo. Ponto final de frase, `:porta`, `/` e aspas ao redor continuam valendo. Não há lista de nomes de variável. Se um `.env` dentro de `scanRoots` tiver o `10.10.0.x` ou o `172.24.x` de outra pessoa, esse número vira o seu, em qualquer rede. Não aponte `scanRoots` para pastas de exemplo ou de outro login se esses arquivos não devem seguir o seu IP.
 
 ## Arquivos atualizados
 
@@ -74,6 +76,8 @@ Cópia irmã: se existir `serveruler-redirect` ao lado desta ferramenta, o `inde
 
 Arquivo ausente → `skip` no log, não é criado. Campo `casa` vazio → pulado.
 
+`ips/table.ts` é um arquivo do repositório `ips`: depois do sync, o `git status` dele mostra a **sua** linha alterada. Leve essa mudança por PR no `ips`. A ferramenta só toca a linha da sua chave.
+
 ## Como o IP é escolhido
 
 `ipconfig` completo. Fora da disputa: WSL, `vEthernet`, Hyper-V, VirtualBox, VMware, Docker, Bluetooth, loopback, `Local Area Connection*`, nomes com `#`, e IPs `127.*` / `169.254.*` / `26.*` (Radmin VPN) / `25.*` (Hamachi). O Radmin aparece como `Ethernet N`, sem o nome da VPN, por isso o filtro é pela faixa de IP.
@@ -88,4 +92,4 @@ Só adaptador virtual → sem IP → tag `sem IP`. IPv6 não entra.
 
 ## Estado `.last-ip.json`
 
-Escrito só após sync real (não em `--dry-run` nem `--check-only`): IP, perfil (`company` / `home`), até 12 IPs anteriores, adaptador, data. O histórico guarda IPs de qualquer perfil e alimenta a próxima troca de rede (veja [O que a varredura troca nos `.env`](#o-que-a-varredura-troca-nos-env)).
+Escrito só após sync real (não em `--dry-run` nem `--check-only`). Enquanto ele não existe, a máquina está em **primeiro uso**: a primeira gravação precisa de aprovação (veja [linha-de-comando.md](linha-de-comando.md#primeiro-uso)). Conteúdo: IP, perfil (`company` / `home`), até 12 IPs anteriores, adaptador, data. O histórico guarda IPs de qualquer perfil e alimenta a próxima troca de rede (veja [O que a varredura troca nos `.env`](#o-que-a-varredura-troca-nos-env)).
